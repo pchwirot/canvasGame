@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>HTML5 Canvas Game Part 6 || Atomic Robot Design</title>
+<!--<link href='http://fonts.googleapis.com/css?family=VT323' rel='stylesheet' /> -->
+<style>
+body {
+  padding:0;
+  margin:0;
+  background:#666;
+}
+canvas {
+  display:block;
+  margin:30px auto 0;
+  border:1px dashed #ccc;
+  background:#000;
+}
+</style>
+<script>
+var canvas,
+    ctx,
+    width = 600,
+    height = 600,
+    enemyTotal = 5,
+    enemies = [],
+    enemy_x = 50,
+    enemy_y = -45,
+    enemy_w = 50,
+    enemy_h = 38,
+	enemy_hp = 2,
+    enemy_speed = 3,
+    enemy,
+    rightKey = false,
+    leftKey = false,
+    upKey = false,
+    downKey = false,
+    player,
+    player_x = (width / 2) - 25, 
+	player_y = height - 75, 
+	player_w = 50, 
+	player_h = 57,
+	player_speed = 10,
+    laserTotal = 2,
+    lasers = [],
+	laser_power = 1,
+    score = 0,
+    alive = true,
+    lives = 3,
+    background_map,
+    starX = 0, starY = 0, starY2 = -600,
+    gameStarted = false;
+
+//Array to hold all the enemies on screen
+for (var i = 0; i < enemyTotal; i++) {
+ enemies.push([enemy_x, enemy_y, enemy_w, enemy_h, enemy_speed, enemy_hp]);
+ enemy_x += enemy_w + 60;
+}
+
+//Clears the canvas so it can be updated
+function clearCanvas() {
+ ctx.clearRect(0,0,width,height);
+}
+
+//enemy hp bar
+function enemy_hp_bar(hp,x,y){
+	ctx.fillStyle="#FF0000";	
+	ctx.fillRect(x,y-10,enemy_w * (hp / enemy_hp), 5);
+}
+
+//Cycles through the array and draws the updated enemy position
+function drawEnemies() {
+ for (var i = 0; i < enemies.length; i++) {
+   ctx.drawImage(enemy, enemies[i][0], enemies[i][1]);
+   enemy_hp_bar(enemies[i][5],enemies[i][0],enemies[i][1]);
+ }
+}
+
+//If an arrow key is being pressed, moves the player in the right direction
+function drawplayer() {
+ if (rightKey) player_x += player_speed;
+ else if (leftKey) player_x -= player_speed;
+ if (upKey) player_y -= player_speed;
+ else if (downKey) player_y += player_speed;
+ if (player_x <= 0) player_x = 0;
+ if ((player_x + player_w) >= width) player_x = width - player_w;
+  if (player_y <= 0) player_y = 0;
+ if ((player_y + player_h) >= height) player_y = height - player_h;
+  ctx.drawImage(player, player_x, player_y);
+}
+
+//This moves the enemies downwards on the canvas and if one passes the bottom of the canvas, it moves it to above the canvas
+function moveEnemies() {
+  for (var i = 0; i < enemies.length; i++) {
+   if (enemies[i][1] < height) {
+     enemies[i][1] += enemies[i][4];
+   } else if (enemies[i][1] > height - 1) {
+      enemies[i][1] = -45;
+    }
+  }
+}
+
+//If there are lasers in the lasers array, then this will draw them on the canvas
+function drawLaser() {
+  if (lasers.length)
+    for (var i = 0; i < lasers.length; i++) {
+     ctx.fillStyle = '#f00';
+     ctx.fillRect(lasers[i][0],lasers[i][1],lasers[i][2],lasers[i][3])
+   }
+}
+
+//If we're drawing lasers on the canvas, this moves them up the canvas
+function moveLaser() {
+ for (var i = 0; i < lasers.length; i++) {
+   if (lasers[i][1] > -11) {
+      lasers[i][1] -= 10;
+    } else if (lasers[i][1] < -10) {
+     lasers.splice(i, 1);
+   }
+ }
+}
+
+//Runs a couple of loops to see if any of the lasers have hit any of the enemies
+function hitTest() {
+ var remove = false;
+ for (var i = 0; i < lasers.length; i++) {
+   for (var j = 0; j < enemies.length; j++) {
+     if (lasers[i][1] <= (enemies[j][1] + enemies[j][3]) && lasers[i][0] >= enemies[j][0] && lasers[i][0] <= (enemies[j][0] + enemies[j][2])) {
+		enemies[j][5] -= laser_power; 
+        remove = true;
+		if(enemies[j][5] <= 0){	
+			remove = true;	
+			score += 10;
+		}
+      }
+    }
+    if (remove == true) {
+      lasers.splice(i, 1);
+      remove = false;
+    }
+  }
+}
+
+//Similar to the laser hit test, this function checks to see if the player's player collides with any of the enemies
+function playerCollision() {
+  var player_xw = player_x + player_w,
+      player_yh = player_y + player_h;
+  for (var i = 0; i < enemies.length; i++) {
+   if (player_x > enemies[i][0] && player_x < enemies[i][0] + enemy_w && player_y > enemies[i][1] && player_y < enemies[i][1] + enemy_h) {
+	   console.log('1 if')
+     checkLives();
+    }
+    if (player_xw < enemies[i][0] + enemy_w && player_xw > enemies[i][0] && player_y > enemies[i][1] && player_y < enemies[i][1] + enemy_h) {
+		console.log('2 if')
+     checkLives();
+    }
+    if (player_yh > enemies[i][1] && player_yh < enemies[i][1] + enemy_h && player_x > enemies[i][0] && player_x < enemies[i][0] + enemy_w) {
+		console.log('3 if')
+     checkLives();
+    }
+    if (player_yh > enemies[i][1] && player_yh < enemies[i][1] + enemy_h && player_xw < enemies[i][0] + enemy_w && player_xw > enemies[i][0]) {
+		console.log('4 if')
+     checkLives();
+    }
+  }
+}
+
+//This function runs whenever the player's player hits an enemy and either subtracts a life or sets the alive variable to false if the player runs out of lives
+function checkLives() {
+  lives -= 1;
+  if (lives > 0) {
+    reset();
+  } else if (lives == 0) {
+    alive = false;
+  }
+}
+
+//This simply resets the player and enemies to their starting positions
+function reset() {
+  var enemy_reset_x = 50;
+  player_x = (width / 2) - 25, player_y = height - 75, player_w = 50, player_h = 57;
+  for (var i = 0; i < enemies.length; i++) {
+   enemies[i][0] = enemy_reset_x;
+   enemies[i][1] = -45;
+   enemy_reset_x = enemy_reset_x + enemy_w + 60;
+ }
+}
+
+//After the player loses all their lives, the continue button is shown and if clicked, it resets the game and removes the event listener for the continue button
+function continueButton(e) {
+ var cursorPos = getCursorPos(e);
+ if (cursorPos.x > (width / 2) - 53 && cursorPos.x < (width / 2) + 47 && cursorPos.y > (height / 2) + 10 && cursorPos.y < (height / 2) + 50) {
+   alive = true;
+    lives = 3;
+    reset();
+    canvas.removeEventListener('click', continueButton, false);
+  }
+}
+
+//holds the cursors position
+function cursorPosition(x,y) {
+  this.x = x;
+  this.y = y;
+}
+
+//finds the cursor's position after the mouse is clicked
+function getCursorPos(e) {
+  var x;
+  var y;
+  if (e.pageX || e.pageY) {
+    x = e.pageX;
+    y = e.pageY;
+  } else {
+    x = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
+    y = e.clientY + document.body.scrollTop + document.documentElement.scrollTop;
+  }
+  x -= canvas.offsetLeft;
+  y -= canvas.offsetTop;
+  var cursorPos = new cursorPosition(x, y);
+  return cursorPos;
+}
+
+//Draws the text for the score and lives on the canvas and if the player runs out of lives, it's draws the game over text and continue button as well as adding the event listener for the continue button
+function scoreTotal() {
+  ctx.font = 'bold 20px Arial';
+  ctx.fillStyle = '#fff';
+  ctx.fillText('Score: ', 10, 55);
+  ctx.fillText(score, 70, 55);
+  ctx.fillText('Lives:', 10, 30);
+  ctx.fillText(lives, 68, 30);
+        if (!gameStarted) {
+    ctx.font = 'bold 50px Arial';
+    ctx.fillText('Canvas Shooter', width / 2 - 150, height / 2);
+    ctx.font = 'bold 20px Arial';
+    ctx.fillText('Click to Play', width / 2 - 56, height / 2 + 30);
+    ctx.fillText('Use arrow keys to move', width / 2 - 100, height / 2 + 60);
+    ctx.fillText('Use the x key to shoot', width / 2 - 100, height / 2 + 90);
+  }
+  if (!alive) {
+    ctx.fillText('Game Over!', 245, height / 2);
+    ctx.fillRect((width / 2) - 60, (height / 2) + 10,100,40);
+    ctx.fillStyle = '#000';
+    ctx.fillText('Continue?', 250, (height / 2) + 35);
+    canvas.addEventListener('click', continueButton, false);
+  }
+}
+
+//Draws and animates the background background_map
+function drawbackground_map() {
+  ctx.drawImage(background_map,starX,starY);
+  ctx.drawImage(background_map,starX,starY2);
+  if (starY > 600) {
+    starY = -599;
+  }
+  if (starY2 > 600) {
+    starY2 = -599;
+  }
+  starY += 1;
+  starY2 += 1;
+}
+
+//The initial function called when the page first loads. Loads the player, enemy and background_map images and adds the event listeners for the arrow keys. It then calls the gameLoop function.
+function init() {
+  canvas = document.getElementById('canvas');
+  ctx = canvas.getContext('2d');
+  enemy = new Image();
+  enemy.src = 'img/8bit_enemy.png';
+  player = new Image();
+  player.src = 'img/player.png';
+  background_map = new Image();
+  background_map.src = 'img/background_map.jpg';
+  document.addEventListener('keydown', keyDown, false);
+  document.addEventListener('keyup', keyUp, false);
+        canvas.addEventListener('click', gameStart, false);
+  gameLoop();
+}
+
+function gameStart() {
+  gameStarted = true;
+  canvas.removeEventListener('click', gameStart, false);
+}
+
+//The main function of the game, it calls all the other functions needed to make the game run
+function gameLoop() {
+  clearCanvas();
+  drawbackground_map()
+  if (alive && gameStarted && lives > 0) {
+   hitTest();
+    playerCollision();
+    moveLaser();
+    moveEnemies();
+    drawEnemies();
+    drawplayer();
+    drawLaser();
+  }
+  scoreTotal();
+  game = setTimeout(gameLoop, 1000 / 30);
+}
+
+//Checks to see which key has been pressed and either to move the player or fire a laser
+function keyDown(e) {
+  if (e.keyCode == 39) rightKey = true;
+  else if (e.keyCode == 37) leftKey = true;
+  if (e.keyCode == 38) upKey = true;
+  else if (e.keyCode == 40) downKey = true;
+  if (e.keyCode == 88 && lasers.length <= laserTotal) lasers.push([player_x + 25, player_y - 20, 4, 20]);
+}
+
+//Checks to see if a pressed key has been released and stops the players movement if it has
+function keyUp(e) {
+  if (e.keyCode == 39) rightKey = false;
+  else if (e.keyCode == 37) leftKey = false;
+  if (e.keyCode == 38) upKey = false;
+  else if (e.keyCode == 40) downKey = false;
+}
+
+window.onload = init;
+</script>
+</head>
+
+<body>
+  <canvas id="canvas" width="600" height="600"></canvas>
+</body>
+</html>

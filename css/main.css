@@ -1,0 +1,46 @@
+@charset "utf-8";
+/* CSS Document */
+
+body {
+  	padding:0;
+ 	margin:0;
+  	background:#666;
+}
+#stage {
+  	border:1px none #ccc;
+  	background:#000;
+}
+
+.gamePos{
+	display:block;
+  	margin-left:150px;
+}
+#statsContainer{
+	
+}
+
+.statsButton{
+	width:100px;
+	height:40px;
+	background-color:#999;
+	cursor:pointer;
+	float:left
+}
+#stats{
+	background-color:#F00;
+}
+.startBtnClass{
+	background-image:url(../img/start_btn.png);	
+	background-repeat:no-repeat;
+}
+.pauseBtnClass{
+	background-image:url(../img/pause_btn.png);	
+	background-repeat:no-repeat;
+}
+
+#playerStats{
+	background-color:#FFF;
+	position:absolute;
+	display:none;
+}
+
