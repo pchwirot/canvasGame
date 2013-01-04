@@ -1,4 +1,4 @@
-var debugMode = true;
+var debugMode = false;
 
 var canvas,	ctx, statsCanvas, ctx2, angle;	
 var enemiesHolder = [];
